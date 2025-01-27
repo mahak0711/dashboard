@@ -1,0 +1,44 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  Client
+  Admin
+}
+
+enum Priority {
+  High
+  Mid
+  Low
+}
+
+enum Status {
+  Active
+  Closed
+}
+
+model User {
+  id         String   @id @default(cuid())
+  phone      String   @unique
+  email      String   @unique
+  password   String
+  role       String     @default("Client") // Using the Role enum here
+  tickets    Ticket[]
+}
+
+model Ticket {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  priority    Priority   @default(Low)
+  status      Status     @default(Active)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  createdAt   DateTime   @default(now())
+}
