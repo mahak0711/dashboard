@@ -19,6 +19,7 @@
     "next-auth": "^4.24.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-google-button": "^0.8.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
