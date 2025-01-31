@@ -1,42 +1,53 @@
 'use client'
 
-import { useState } from "react"
-import { useSession, signIn, signOut } from "next-auth/react"
-import { FaGoogle, FaGithub } from "react-icons/fa"
+import { useState } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
+import { FaGoogle, FaGithub } from "react-icons/fa";
 
 export default function Homepage() {
-  const { data: session } = useSession()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const { data: session } = useSession();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
+      // Validate passwords match for sign-up
+      if (isSignUp && password !== confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      // Handle sign-up
       if (isSignUp) {
         const res = await fetch("/api/auth/signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.message || "Sign-up failed")
+          body: JSON.stringify({ email, password, phone }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Sign-up failed");
       }
 
-      const result = await signIn("credentials", { email, password, redirect: false })
-      if (result?.error) throw new Error(result.error)
+      // Handle login
+      const result = await signIn("credentials", { email, password, redirect: false });
+      if (result?.error) throw new Error(result.error);
 
+      // Redirect to dashboard after successful login
+      window.location.href = "/dashboard";
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (session) {
     return (
@@ -54,14 +65,14 @@ export default function Homepage() {
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h2 className="text-2xl font-bold mb-6 text-center">{isSignUp ? "Create an Account" : "Welcome Back"}</h2>
-        
+
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -76,6 +87,19 @@ export default function Homepage() {
               required
             />
           </div>
+          {isSignUp && (
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone</label>
+              <input
+                type="text"
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </div>
+          )}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
             <input
@@ -87,6 +111,19 @@ export default function Homepage() {
               required
             />
           </div>
+          {isSignUp && (
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">Confirm Password</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </div>
+          )}
           <button
             type="submit"
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -133,5 +170,5 @@ export default function Homepage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
