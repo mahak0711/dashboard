@@ -22,53 +22,50 @@ enum Status {
   Active
   Closed
 }
-
+ 
 model User {
-  id            String    @id @default(cuid())
-  phone         String    @unique
+  id            Int       @id @default(autoincrement())
+  name          String
   email         String    @unique
-  password      String
-  role          Role      @default(Client) // Using the Role enum here
-  tickets       Ticket[]
-  accounts      Account[]
-  sessions      Session[]
-  name          String?
-  emailVerified DateTime? @map("email_verified")
+  emailVerified DateTime?
+  password      String?
   image         String?
-
-  @@map("users")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
 }
 
-model Account {
-  id                 String  @id @default(cuid())
-  userId             String  @map("user_id")
-  type               String
-  provider           String
-  providerAccountId  String  @map("provider_account_id")
-  refreshToken String? @db.Text
-  accessToken  String? @db.Text
-  idToken      String? @db.Text
 
-  expires_at         Int?
-  token_type         String?
-  scope              String?
- 
-  session_state      String?
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
+  @@id([provider, providerAccountId])
+  @@index([userId]) // Add an index for userId to improve query performance
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
+  sessionToken String   @unique
+  userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("sessions")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
@@ -76,20 +73,20 @@ model VerificationToken {
   token      String
   expires    DateTime
 
-  @@unique([identifier, token])
-  @@map("verification_tokens")
+  @@id([identifier, token])
 }
 
-model Ticket {
-  id          String     @id @default(cuid())
-  title       String
-  description String
-  priority    Priority   @default(Low)
-  status      Status     @default(Active)
-  userId      String
-  user        User       @relation(fields: [userId], references: [id])
-  createdAt   DateTime   @default(now())
-  @@index([userId])
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
 
-  @@map("tickets")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
 }
