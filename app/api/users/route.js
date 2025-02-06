@@ -1,161 +1,75 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/app/lib/db';
+import * as z from "zod";
 
-const prisma = new PrismaClient();
+const userSchema = z.object({
+  username: z.string().min(1, "Username is required").max(100), // Added validation for username
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Invalid email"),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .min(8, "Password must have at least 8 characters"), // Fixed error message
+});
 
-// Fetch all users
-export async function GET() {
-  try {
-    const users = await prisma.user.findMany({
-      include: { tickets: true }, // Include tickets in the response
-    });
-    return NextResponse.json(users);
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch users', details: error.message },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-// Create a new user
 export async function POST(request) {
   try {
     const body = await request.json();
-    console.log('Request Body:', body); // Debugging log
+    
+    // Validate body against schema
+    const { username, email, password } = userSchema.parse(body);
 
-    const { phone, password, role, email } = body;
-
-    // Basic validation
-    if (!phone || !password || !email) {
-      return NextResponse.json(
-        { error: 'Missing required fields: phone, password, or email' },
-        { status: 400 }
-      );
-    }
-
-    // Check if user with the same phone or email already exists
-    const existingUserByPhone = await prisma.user.findUnique({
-      where: { phone },
-    });
-    if (existingUserByPhone) {
-      return NextResponse.json(
-        { error: 'User with this phone number already exists' },
-        { status: 409 }
-      );
-    }
-
-    const existingUserByEmail = await prisma.user.findUnique({
+    // Check if user with email already exists
+    const existingUserByEmail = await db.user.findUnique({
       where: { email },
     });
+
     if (existingUserByEmail) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
-      );
+      return NextResponse.json({
+        user: null,
+        message: "User with this email already exists",
+      });
     }
 
-    // Hash the password
+    // Check if user with username already exists
+    const existingUserByUsername = await db.user.findUnique({
+      where: { username },
+    });
+
+    if (existingUserByUsername) {
+      return NextResponse.json({
+        user: null,
+        message: "User with this username already exists",
+      });
+    }
+
+    // Hash the password before saving it
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the user
-    const user = await prisma.user.create({
+    // Create a new user in the database
+    const newUser = await db.user.create({
       data: {
-        phone,
+        username,
         email,
         password: hashedPassword,
-        role: role || 'Client', // Default to 'Client' if role is not provided
       },
     });
 
-    return NextResponse.json(user, { status: 201 });
-  } catch (error) {
-    if (error.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'User with this phone number or email already exists' },
-        { status: 409 }
-      );
-    }
-    return NextResponse.json(
-      { error: 'Failed to create user', details: error.message },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
-  }
-}
+    // Remove the password field from the response before sending
+    const { password: newUserPassword, ...rest } = newUser;
 
-// Update a user
-export async function PUT(request) {
-  try {
-    const body = await request.json();
-    const { id, role } = body;
-
-    // Basic validation
-    if (!id || !role) {
-      return NextResponse.json(
-        { error: 'Missing required fields: id or role' },
-        { status: 400 }
-      );
-    }
-
-    // Update the user
-    const user = await prisma.user.update({
-      where: { id },
-      data: { role },
+    return NextResponse.json({
+      user: rest,
+      message: "User created successfully!",
     });
 
-    return NextResponse.json(user);
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to update user', details: error.message },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-// Delete a user
-export async function DELETE(request) {
-  try {
-    const body = await request.json();
-    const { id } = body;
-
-    // Basic validation
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Missing required field: id' },
-        { status: 400 }
-      );
-    }
-
-    // Check if user exists
-    const user = await prisma.user.findUnique({
-      where: { id },
+    console.error(error); // Log the error for better tracking
+    return NextResponse.json({
+      message: "Something went wrong!",
     });
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Delete the user
-    await prisma.user.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ message: 'User deleted' });
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to delete user', details: error.message },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -8,11 +8,11 @@ export default function Home() {
   return(
     <html lang="en">
           <body>
-            <ClientProvider>
-              <Homepage />
-              </ClientProvider>
+            <Homepage/>
               
           </body>
         </html>
   )
 }
+
+//if user exist 
