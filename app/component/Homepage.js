@@ -11,6 +11,8 @@ return (
   <Link href='/sign-in'>
   SignIn
   </Link>
+<br/>
+  <Link href='/admin'><button className="bg-amber-500 h-10 rounded-4xl w-30 ">open My admin</button></Link>
   </>
 )
   
