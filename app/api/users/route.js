@@ -19,7 +19,6 @@ export async function POST(request) {
   try {
     const body = await request.json();
     
-    // Validate body against schema
     const { username, email, password } = userSchema.parse(body);
 
     // Check if user with email already exists
@@ -34,7 +33,6 @@ export async function POST(request) {
       });
     }
 
-    // Check if user with username already exists
     const existingUserByUsername = await db.user.findUnique({
       where: { username },
     });
@@ -46,10 +44,8 @@ export async function POST(request) {
       });
     }
 
-    // Hash the password before saving it
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create a new user in the database
     const newUser = await db.user.create({
       data: {
         username,
@@ -58,7 +54,6 @@ export async function POST(request) {
       },
     });
 
-    // Remove the password field from the response before sending
     const { password: newUserPassword, ...rest } = newUser;
 
     return NextResponse.json({
@@ -67,7 +62,7 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error(error); // Log the error for better tracking
+    console.log(error.stack); // Log the error for better tracking
     return NextResponse.json({
       message: "Something went wrong!",
     });

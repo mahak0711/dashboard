@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { signIn } from "next-auth/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import GoogleButton from "react-google-button";
 
 // Schema validation
 const FormSchema = z.object({
@@ -51,12 +52,16 @@ const SignInForm = () => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-center text-gray-700">Sign In</h2>
+        <h2 className="text-2xl font-semibold text-center text-gray-700">
+          Sign In
+        </h2>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 space-y-4">
           {/* Email Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-600">Email</label>
+            <label className="block text-sm font-medium text-gray-600">
+              Email
+            </label>
             <input
               type="email"
               defaultValue=""
@@ -73,7 +78,9 @@ const SignInForm = () => {
 
           {/* Password Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-600">Password</label>
+            <label className="block text-sm font-medium text-gray-600">
+              Password
+            </label>
             <input
               type="password"
               defaultValue=""
@@ -101,6 +108,22 @@ const SignInForm = () => {
             <span className="mx-4 text-gray-500">or</span>
             <hr className="flex-grow border-gray-300" />
           </div>
+          <button
+            className="bg-blue-500 w-40 rounded-4xl"
+            onClick={() => {
+              signIn("github", { callbackUrl: "/" });
+            }}
+          >
+            Sign In with Github
+          </button>
+          <button
+            className="bg-blue-500 w-40 rounded-4xl"
+            onClick={() => {
+              signIn("google", { callbackUrl: "/" });
+            }}
+          >
+            Sign In with Google
+          </button>
 
           <p className="text-center text-sm text-gray-600">
             If you don&apos;t have an account, please&nbsp;

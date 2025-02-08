@@ -4,7 +4,7 @@ import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { db } from "./db";  // ✅ Ensure correct path
+import { db } from "./db";  
 
 export const authOptions = {
   pages: {
@@ -33,7 +33,7 @@ export const authOptions = {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
-        const existingUser = await db.user.findUnique({
+        const existingUser = await db.user.findFirst({
           where: {
             email: credentials.email
           }
@@ -74,7 +74,6 @@ export const authOptions = {
         }
       
       }
-      return session
     },
   }
 };

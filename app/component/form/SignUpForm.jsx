@@ -29,26 +29,33 @@ const SignUpForm = () => {
   })
 
   const onSubmit = async (values) => {
-
-    const response = await fetch("/api/users", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: values.username,
-        email: values.email,
-        password: values.password,
-      }),
-    })
-
-    if (response.ok) {
-      router.push("/sign-in")
-    } else {
-      console.error("Registration Failed")
+    try {
+      const response = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: values.username,
+          email: values.email,
+          password: values.password,
+        }),
+      });
+  
+      const data = await response.json(); // Parse JSON response
+  
+      if (response.ok) {
+        router.push("/sign-in");
+      } else {
+        console.error("Registration Failed", data); // Log response error
+        alert(data.message || "Registration failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Network Error:", error);
+      alert("Something went wrong. Please check your network.");
     }
-  }
-
+  };
+  
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-lg">

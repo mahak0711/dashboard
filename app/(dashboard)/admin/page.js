@@ -1,16 +1,19 @@
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/lib/auth";
 import { getServerSession } from "next-auth";
 
-const page=async()=>{
-    const session=await getServerSession(authOptions)
-    console.log(session);
-    
-    return(
-        <div>
-            <h1>Admin page</h1>
-            <p>My page content</p>
-        </div>
-    )
+const page = async () => {
+    const session = await getServerSession(authOptions);
 
-}
+
+    if (session?.user) {
+        return (
+            <h2 className="text-2xl">
+                Admin Page - Welcome Back {(session?.user.username)}
+            </h2>
+        );
+    }
+
+    return <h2>Please login to see this</h2>;
+};
+
 export default page;
