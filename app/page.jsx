@@ -2,7 +2,6 @@
 
 
 import Homepage from "./component/Homepage"
-import ClientProvider from "./component/ClientProvider"
 
 export default function Home() {
   return(
@@ -15,4 +14,3 @@ export default function Home() {
   )
 }
 
-//if user exist 

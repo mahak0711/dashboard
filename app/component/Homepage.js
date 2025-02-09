@@ -1,19 +1,24 @@
-'use client'
+"use client";
 
-import { useState } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
-import { FaGoogle, FaGithub } from "react-icons/fa";
 import Link from "next/link";
 
 export default function Homepage() {
-return (
-  <>
-  <Link href='/sign-in'>
-  SignIn
-  </Link>
-<br/>
-  <Link href='/admin'><button className="bg-amber-500 h-10 rounded-4xl w-30 ">open My admin</button></Link>
-  </>
-)
-  
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-gray-900">
+      {/* Sign In Button */}
+      <Link
+        href="/sign-in"
+        className="px-6 py-3 mb-6 text-lg font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-md transition-transform transform hover:scale-105 hover:shadow-lg"
+      >
+        Sign In
+      </Link>
+
+      {/* Admin Button */}
+      <Link href="/admin">
+        <button className="px-6 py-3 text-lg font-medium text-white bg-amber-500 rounded-full shadow-md transition-transform transform hover:scale-105 hover:shadow-lg">
+          Open My Admin
+        </button>
+      </Link>
+    </div>
+  );
 }
