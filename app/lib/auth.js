@@ -50,30 +50,34 @@ export const authOptions = {
         return {
           id: `${existingUser.id}`,
           username: existingUser.username,
-          email: existingUser.email
+          email: existingUser.email,
+          role:existingUser.role,
         };
       }
     })
   ],
-  callbacks:{
-    async jwt({token,user}){
-      if(user){
-        return{
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        return {
           ...token,
-          username:user.username,
-        }
+          id: user.id, // ✅ Include user ID
+          username: user.username,
+          role: user.role,
+        };
       }
-      return token
+      return token;
     },
-    async session({session,token}){
-      return{
+    async session({ session, token }) {
+      return {
         ...session,
-        user:{
+        user: {
           ...session.user,
-          username:token.username,
-        }
-      
-      }
+          id: token.id, // ✅ Ensure `id` is included
+          username: token.username,
+          role: token.role,
+        },
+      };
     },
-  }
-};
+  },
+};  

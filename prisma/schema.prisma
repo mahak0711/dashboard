@@ -6,16 +6,40 @@ datasource db {
 generator client {
   provider = "prisma-client-js"
 }
+
 model User {
-  id              String    @id @default(cuid())
-  name            String?
-  email           String    @unique
-  username        String?   @unique
-  password        String?
-  emailVerified   DateTime?
-  image           String?
-  Account         Account[]
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  username      String?   @unique
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(CLIENT) // Add this
+
+  ticketsCreated Ticket[] @relation(name: "CreatedTickets")
+  ticketsHandled Ticket[] @relation(name: "HandledTickets")
+
+  Account       Account[]
 }
+
+model Ticket {
+  id          String    @id @default(cuid())
+  description String
+  priority    String
+  status      String    @default("open")
+  createdBy   User      @relation(name: "CreatedTickets", fields: [createdById], references: [id])
+  createdById String
+  handledBy   User?     @relation(name: "HandledTickets", fields: [handledById], references: [id])
+  handledById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+
+
 
 model Account {
   userId            String
@@ -38,3 +62,20 @@ model Account {
   @@id([provider, providerAccountId])
 }
 
+
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Status {
+  OPEN
+  CLOSED
+}

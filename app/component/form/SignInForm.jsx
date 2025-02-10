@@ -43,7 +43,7 @@ const SignInForm = () => {
     if (signInData?.error) {
       console.error(signInData.error);
     } else {
-      router.push("/admin");
+      router.push("/dashboard/admin");
     }
   };
 

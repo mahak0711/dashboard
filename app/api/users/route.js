@@ -3,68 +3,75 @@ import bcrypt from 'bcryptjs';
 import { db } from '@/app/lib/db';
 import * as z from "zod";
 
+// ✅ User Schema Validation
 const userSchema = z.object({
-  username: z.string().min(1, "Username is required").max(100), // Added validation for username
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Invalid email"),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .min(8, "Password must have at least 8 characters"), // Fixed error message
+  username: z.string().min(1, "Username is required").max(100),
+  email: z.string().min(1, "Email is required").email("Invalid email"),
+  password: z.string().min(8, "Password must have at least 8 characters"),
 });
 
 export async function POST(request) {
   try {
     const body = await request.json();
-    
     const { username, email, password } = userSchema.parse(body);
 
-    // Check if user with email already exists
-    const existingUserByEmail = await db.user.findUnique({
-      where: { email },
+    // ✅ Check if the user already exists
+    const existingUser = await db.user.findFirst({
+      where: {
+        OR: [{ email }, { username }],
+      },
     });
 
-    if (existingUserByEmail) {
-      return NextResponse.json({
-        user: null,
-        message: "User with this email already exists",
-      });
+    if (existingUser) {
+      return NextResponse.json(
+        {
+          user: null,
+          message: existingUser.email === email
+            ? "User with this email already exists"
+            : "User with this username already exists",
+        },
+        { status: 400 }
+      );
     }
 
-    const existingUserByUsername = await db.user.findUnique({
-      where: { username },
-    });
-
-    if (existingUserByUsername) {
-      return NextResponse.json({
-        user: null,
-        message: "User with this username already exists",
-      });
-    }
-
+    // ✅ Hash password securely
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // ✅ Create new user with CLIENT role
     const newUser = await db.user.create({
       data: {
         username,
         email,
         password: hashedPassword,
+        role: "CLIENT", // Assign CLIENT role by default
       },
     });
 
-    const { password: newUserPassword, ...rest } = newUser;
-
-    return NextResponse.json({
-      user: rest,
-      message: "User created successfully!",
+    // ✅ Automatically create a welcome ticket for new CLIENT users
+    const welcomeTicket = await db.ticket.create({
+      data: {
+        description: "Welcome! This is your first ticket.",
+        priority: "LOW",
+        createdById: newUser.id,
+      },
     });
+
+    const { password: _, ...rest } = newUser; // Exclude password from response
+
+    return NextResponse.json(
+      {
+        user: rest,
+        ticket: welcomeTicket,
+        message: "User registered successfully! A welcome ticket has been created.",
+      },
+      { status: 201 }
+    );
 
   } catch (error) {
-    console.log(error.stack); // Log the error for better tracking
-    return NextResponse.json({
-      message: "Something went wrong!",
-    });
+    console.error("Registration Error:", error.message);
+    return NextResponse.json(
+      { message: "Something went wrong!", error: error.message },
+      { status: 500 }
+    );
   }
 }
