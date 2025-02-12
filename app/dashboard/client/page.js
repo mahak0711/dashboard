@@ -3,10 +3,25 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // ShadCN Alert
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +34,7 @@ export default function ClientDashboard() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [newTicket, setNewTicket] = useState({ description: "", priority: "LOW" });
+  const [newTicket, setNewTicket] = useState({ description: "", priority: "" });
 
   // Redirect if not authorized
   useEffect(() => {
@@ -68,7 +83,7 @@ export default function ClientDashboard() {
 
       const createdTicket = await response.json();
       setTickets((prev) => [createdTicket, ...prev]);
-      setNewTicket({ description: "", priority: "LOW" });
+      setNewTicket({ description: "", priority: "" });
     } catch (error) {
       console.error("Error:", error);
       setError(error.message);
@@ -77,7 +92,6 @@ export default function ClientDashboard() {
 
   return (
     <div className="flex flex-col items-center mt-18 space-y-6">
-
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle>Create a New Ticket</CardTitle>
@@ -89,20 +103,36 @@ export default function ClientDashboard() {
               type="text"
               placeholder="Enter ticket description"
               value={newTicket.description}
-              onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
+              onChange={(e) =>
+                setNewTicket({ ...newTicket, description: e.target.value })
+              }
             />
           </div>
           <div>
             <Label>Priority</Label>
-            <select
-              className="w-full border rounded-md p-2"
+            <Select
               value={newTicket.priority}
-              onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
+              onValueChange={(value) =>
+                setNewTicket({ ...newTicket, priority: value })
+              }
             >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-            </select>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="low" className="bg-green-600">
+                    Low
+                  </SelectItem>
+                  <SelectItem value="medium" className="bg-yellow-300">
+                    Medium
+                  </SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            {/* // value={newTicket.priority}
+              // onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })} */}
           </div>
           <Button onClick={handleCreateTicket}>Submit</Button>
         </CardContent>
@@ -141,23 +171,32 @@ export default function ClientDashboard() {
                 <TableBody>
                   {tickets.map((ticket) => (
                     <TableRow key={ticket.id}>
-                      <TableCell className="w-1/2">{ticket.description}</TableCell>
+                      <TableCell className="w-1/2">
+                        {ticket.description}
+                      </TableCell>
                       <TableCell className="text-center">
                         <span
                           className={`px-3 py-1 rounded text-white font-medium ${
-                            ticket.priority === "HIGH" ? "bg-red-500" :
-                            ticket.priority === "MEDIUM" ? "bg-yellow-500 text-black" :
-                            "bg-green-500"
+                            ticket.priority.toLowerCase() === "high"
+                              ? "bg-red-500"
+                              : ticket.priority.toLowerCase() === "medium"
+                              ? "bg-yellow-500 text-black"
+                              : "bg-green-500"
                           }`}
                         >
-                          {ticket.priority}
+                          {ticket.priority.charAt(0).toUpperCase() +
+                            ticket.priority.slice(1)}
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
                         {ticket.status === "open" ? (
-                          <span className="text-green-600 font-semibold">Open</span>
+                          <span className="text-green-600 font-semibold">
+                            Open
+                          </span>
                         ) : (
-                          <span className="text-gray-500 font-semibold">Closed</span>
+                          <span className="text-gray-500 font-semibold">
+                            Closed
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
