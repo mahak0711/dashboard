@@ -2,6 +2,7 @@ import "./globals.css";
 import Navbar from "./component/Navbar";
 import { Inter } from "next/font/google"
 import ClientProvider from "./component/ClientProvider";
+import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -19,6 +20,8 @@ export default function RootLayout({ children }) {
        
           <Navbar />
           {children}
+          <Toaster richColors position="top-right" />
+
         </main>
       </body>
     </html>

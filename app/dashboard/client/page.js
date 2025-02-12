@@ -4,110 +4,175 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // ShadCN Alert
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { TriangleAlert } from "lucide-react"; // Icon for Alert
+
 export default function ClientDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("LOW");
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  // Redirect unauthorized users
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [newTicket, setNewTicket] = useState({ description: "", priority: "LOW" });
+
+  // Redirect if not authorized
   useEffect(() => {
     if (status === "loading") return;
-    if (!session || session.user.role !== "CLIENT") {
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+    if (session.user.role !== "CLIENT") {
       router.push("/dashboard/admin");
     }
   }, [session, status]);
 
-  // Fetch user tickets
+  // Fetch tickets for the logged-in user
   useEffect(() => {
     async function fetchTickets() {
-      const response = await fetch("/api/ticket");
-      if (response.ok) {
+      try {
+        const response = await fetch("/api/ticket");
+        if (!response.ok) throw new Error("Failed to fetch tickets");
+
         const data = await response.json();
         setTickets(data);
+      } catch (error) {
+        console.error("Error:", error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
     }
+
     if (session?.user?.role === "CLIENT") {
       fetchTickets();
     }
   }, [session]);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!description) return alert("Description is required");
-  
-    setLoading(true);
-  
-    const ticketData = {
-      description,
-      priority,
-    };
-  
-    console.log("Sending request with data:", ticketData); // Debugging
-  
+  // Handle ticket creation
+  async function handleCreateTicket() {
     try {
       const response = await fetch("/api/ticket", {
         method: "POST",
+        body: JSON.stringify(newTicket),
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ticketData),
       });
-  
-      const responseText = await response.text(); // Read response
-      console.log("Response Status:", response.status);
-      console.log("Response Body:", responseText);
-  
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${responseText}`);
-      }
-  
-      const newTicket = JSON.parse(responseText);
-      setTickets([...tickets, newTicket]); // Update UI
-      setDescription(""); // Clear form
-      setPriority("LOW"); // Reset priority
+
+      if (!response.ok) throw new Error("Failed to create ticket");
+
+      const createdTicket = await response.json();
+      setTickets((prev) => [createdTicket, ...prev]);
+      setNewTicket({ description: "", priority: "LOW" });
     } catch (error) {
-      console.error("Request failed:", error.message);
-      alert("Failed to create ticket: " + error.message);
+      console.error("Error:", error);
+      setError(error.message);
     }
-  
-    setLoading(false);
   }
-  
 
   return (
-    <div className="mt-20">
-      <h1>Client Dashboard</h1>
-      <h2>Create a Ticket</h2>
-      <form onSubmit={handleSubmit}>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Describe your issue"
-          required
-        />
-        <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-          <option value="LOW">Low</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HIGH">High</option>
-        </select>
-        <button type="submit" disabled={loading}>
-          {loading ? "Submitting..." : "Create Ticket"}
-        </button>
-      </form>
+    <div className="flex flex-col items-center mt-18 space-y-6">
 
-      <h2>Your Tickets</h2>
-      {tickets.length > 0 ? (
-        <ul>
-          {tickets.map((ticket) => (
-            <li key={ticket.id}>
-              <strong>{ticket.description}</strong> - {ticket.status} ({ticket.priority})
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No tickets created yet</p>
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle>Create a New Ticket</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Description</Label>
+            <Input
+              type="text"
+              placeholder="Enter ticket description"
+              value={newTicket.description}
+              onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label>Priority</Label>
+            <select
+              className="w-full border rounded-md p-2"
+              value={newTicket.priority}
+              onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
+            >
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+            </select>
+          </div>
+          <Button onClick={handleCreateTicket}>Submit</Button>
+        </CardContent>
+      </Card>
+
+      {/* ShadCN Alert for errors (Below Ticket Card) */}
+      {error && (
+        <Alert variant="destructive" className="w-full max-w-2xl">
+          <TriangleAlert className="h-5 w-5" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
+
+      {/* Tickets Table */}
+      <Card className="w-full max-w-4xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">Your Tickets</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-center text-gray-500">Loading tickets...</p>
+          ) : tickets.length === 0 ? (
+            <p className="text-center text-gray-500">No tickets found</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-1/2">Description</TableHead>
+                    <TableHead className="text-center">Priority</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tickets.map((ticket) => (
+                    <TableRow key={ticket.id}>
+                      <TableCell className="w-1/2">{ticket.description}</TableCell>
+                      <TableCell className="text-center">
+                        <span
+                          className={`px-3 py-1 rounded text-white font-medium ${
+                            ticket.priority === "HIGH" ? "bg-red-500" :
+                            ticket.priority === "MEDIUM" ? "bg-yellow-500 text-black" :
+                            "bg-green-500"
+                          }`}
+                        >
+                          {ticket.priority}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {ticket.status === "open" ? (
+                          <span className="text-green-600 font-semibold">Open</span>
+                        ) : (
+                          <span className="text-gray-500 font-semibold">Closed</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button variant="outline" size="sm">
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

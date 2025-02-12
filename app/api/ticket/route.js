@@ -1,30 +1,37 @@
 import { authOptions } from "@/app/lib/auth";
-import { db } from "@/app/lib/db";
 import { getServerSession } from "next-auth";
+import { db } from "@/app/lib/db";
 
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
-  console.log("Session Data in GET:", session); // Debugging
+  try {
+    const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== "ADMIN") {
-    return new Response("Unauthorized", { status: 401 });
+    if (!session || !session.user?.id) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    }
+
+    const tickets = await db.ticket.findMany({
+      where: { createdById: session.user.id }, // Fetch only the user's tickets
+      orderBy: { createdAt: "desc" }, // Newest first
+    });
+
+    return new Response(JSON.stringify(tickets), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Error fetching tickets:", error);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
   }
-
-  const tickets = await db.ticket.findMany({
-    where: { status: "open" },
-    include: { createdBy: true },
-  });
-
-  return new Response(JSON.stringify(tickets), { status: 200 });
 }
 
 
 export async function POST(req) {
   const session = await getServerSession(authOptions);
-  console.log("Session Data in POST:", session); // Debugging
+  console.log("Session Data in POST:", session); 
 
   if (!session || !session.user || !session.user.id) {
-    return new Response("Unauthorized", { status: 401 });
+    return new Response("Unauthorized");
   }
 
   try {
@@ -38,11 +45,11 @@ export async function POST(req) {
       data: {
         description,
         priority,
-        createdById: session.user.id, // This was causing the error
+        createdById: session.user.id, 
       },
     });
 
-    return new Response(JSON.stringify(newTicket), { status: 201 });
+    return new Response(JSON.stringify(newTicket));
   } catch (error) {
     console.error("Error in API:", error);
     return new Response(JSON.stringify({ error: "Invalid JSON data" }), { status: 500 });

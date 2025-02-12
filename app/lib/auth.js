@@ -61,7 +61,7 @@ export const authOptions = {
       if (user) {
         return {
           ...token,
-          id: user.id, // ✅ Include user ID
+          id: user.id,
           username: user.username,
           role: user.role,
         };
@@ -73,7 +73,7 @@ export const authOptions = {
         ...session,
         user: {
           ...session.user,
-          id: token.id, // ✅ Ensure `id` is included
+          id: token.id, 
           username: token.username,
           role: token.role,
         },
