@@ -92,7 +92,7 @@ export default function ClientDashboard() {
 
   return (
     <div className="flex flex-col items-center mt-18 space-y-6">
-      <Card className="w-full max-w-2xl">
+      <Card className="w-full max-w-4xl mt-20">
         <CardHeader>
           <CardTitle>Create a New Ticket</CardTitle>
         </CardHeader>

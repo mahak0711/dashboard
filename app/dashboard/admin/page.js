@@ -8,24 +8,32 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [tickets, setTickets] = useState([]);
 
-  // Redirect non-admin users
+  // Predefined admin email
+  const ADMIN_EMAIL = "admin@example.com";
+
+  // Redirect if not the admin
   useEffect(() => {
     if (status === "loading") return;
-    if (!session || session.user.role !== "ADMIN") {
-      router.push("/dashboard/client"); // Redirect non-admins
+    if (!session || session.user.email !== ADMIN_EMAIL) {
+      router.push("/dashboard/client"); // Redirect non-admin users
     }
   }, [session, status]);
 
   // Fetch open tickets
   useEffect(() => {
     async function fetchTickets() {
-      const response = await fetch("/api/tickets");
-      if (response.ok) {
-        const data = await response.json();
-        setTickets(data);
+      try {
+        const response = await fetch("/api/ticket");
+        if (response.ok) {
+          const data = await response.json();
+          setTickets(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch tickets", error);
       }
     }
-    if (session?.user?.role === "ADMIN") {
+
+    if (session?.user?.email === ADMIN_EMAIL) {
       fetchTickets();
     }
   }, [session]);
@@ -34,7 +42,7 @@ export default function AdminDashboard() {
     return <p>Loading...</p>;
   }
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || session.user.email !== ADMIN_EMAIL) {
     return null; // Avoid flickering before redirect
   }
 

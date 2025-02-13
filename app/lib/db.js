@@ -1,10 +1,11 @@
+const { PrismaClient } = require("@prisma/client");
 
-import { PrismaClient } from "@prisma/client"
+const globalForPrisma = global;
 
-const globalForPrisma = global
+const prisma = globalForPrisma.prisma || new PrismaClient();
 
- const prisma = globalForPrisma.prisma || new PrismaClient()
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
-
-export const db=prisma;
+module.exports = { db: prisma }; // ✅ Fix: Use "module.exports" correctly
