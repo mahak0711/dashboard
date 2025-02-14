@@ -11,10 +11,10 @@ export async function GET(req) {
     }
 
     const tickets = await db.ticket.findMany({
-      where: { createdById: session.user.id }, // Fetch only the user's tickets
-      orderBy: { createdAt: "desc" }, // Newest first
+      where: session.user.email === "admin@example.com" ? {} : { createdById: session.user.id },
+      orderBy: { createdAt: "desc" },
     });
-
+    
     return new Response(JSON.stringify(tickets), {
       status: 200,
       headers: { "Content-Type": "application/json" },
