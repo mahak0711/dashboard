@@ -13,19 +13,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { TriangleAlert } from "lucide-react";
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   const ADMIN_EMAIL = "admin@example.com";
 
-  // Redirect if not admin
   useEffect(() => {
     if (status === "loading") return;
     if (!session || session.user.email !== ADMIN_EMAIL) {
@@ -33,20 +28,16 @@ export default function AdminDashboard() {
     }
   }, [session, status]);
 
-  // Fetch all tickets
   useEffect(() => {
     async function fetchTickets() {
       try {
         const response = await fetch("/api/ticket");
-        if (!response.ok) throw new Error("Failed to fetch tickets");
-
-        const data = await response.json();
-        setTickets(data);
+        if (response.ok) {
+          const data = await response.json();
+          setTickets(data);
+        }
       } catch (error) {
-        console.error("Error:", error);
-        setError(error.message);
-      } finally {
-        setLoading(false);
+        console.error("Failed to fetch tickets", error);
       }
     }
 
@@ -55,23 +46,59 @@ export default function AdminDashboard() {
     }
   }, [session]);
 
+  const handleCloseTicket = async (id) => {
+    try {
+      console.log("Closing ticket ID:", id); // Debugging
+  
+      const response = await fetch(`/api/ticket/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "closed" }),
+      });
+  
+      console.log("API Response Status:", response.status); // Debugging
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to update ticket: ${response.status} - ${errorText}`);
+      }
+  
+      const updatedTicket = await response.json();
+      console.log("Updated Ticket:", updatedTicket);
+  
+      setTickets((prevTickets) =>
+        prevTickets.map((ticket) =>
+          ticket.id === id ? { ...ticket, status: "closed" } : ticket
+        )
+      );
+    } catch (error) {
+      console.error("Error:", error.message);
+    }
+  };
+  
+  if (status === "loading") {
+    return <p>Loading...</p>;
+  }
+
+  if (!session || session.user.email !== ADMIN_EMAIL) {
+    return null;
+  }
+
   return (
     <div className="flex flex-col items-center mt-18 space-y-6">
-      <Card className="w-full max-w-4xl mt-20">
+      <Card className="w-full max-w-4xl">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">All Tickets</CardTitle>
+          <CardTitle className="text-xl font-semibold">Admin Ticket Management</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <p className="text-center text-gray-500">Loading tickets...</p>
-          ) : tickets.length === 0 ? (
+          {tickets.length === 0 ? (
             <p className="text-center text-gray-500">No tickets found</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-1/2">Description</TableHead>
+                    <TableHead>Description</TableHead>
                     <TableHead className="text-center">Priority</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
@@ -80,9 +107,9 @@ export default function AdminDashboard() {
                 <TableBody>
                   {tickets.map((ticket) => (
                     <TableRow key={ticket.id}>
-                      <TableCell className="w-1/2">{ticket.description}</TableCell>
+                      <TableCell>{ticket.description}</TableCell>
                       <TableCell className="text-center">
-                        <span
+                      <span
                           className={`px-3 py-1 rounded text-white font-medium ${
                             ticket.priority.toLowerCase() === "high"
                               ? "bg-red-500"
@@ -103,9 +130,15 @@ export default function AdminDashboard() {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Button variant="outline" size="sm">
-                          Manage
-                        </Button>
+                        {ticket.status === "open" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCloseTicket(ticket.id)}
+                          >
+                            Mark as Closed
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -115,15 +148,6 @@ export default function AdminDashboard() {
           )}
         </CardContent>
       </Card>
-
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive" className="w-full max-w-2xl">
-          <TriangleAlert className="h-5 w-5" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }

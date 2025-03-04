@@ -16,7 +16,7 @@ export default function RootLayout({ children }) {
       <body className={inter.className}>
       <ClientProvider>
 
-        <main className=" flex flex-col justify-center items-center">
+      <main className="w-full min-h-screen flex flex-col">
        
           <Navbar />
           {children}
