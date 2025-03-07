@@ -14,7 +14,7 @@ export default function Homepage() {
       </div>
 
       {/* Buttons Container */}
-      <div className="flex flex-col gap-4 w-full max-w-sm">
+      <div className="flex flex-col mt-8 px-8 gap-4 w-full max-w-sm">
         <Link
           href="/sign-in"
           className="w-full text-center px-6 py-3 text-lg font-semibold bg-white text-gray-900 rounded-lg shadow-md transition-all transform hover:scale-105 hover:shadow-lg hover:bg-gray-100"
