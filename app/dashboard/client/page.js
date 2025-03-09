@@ -8,7 +8,6 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -32,8 +31,10 @@ export default function ClientDashboard() {
   const router = useRouter();
 
   const [tickets, setTickets] = useState([]);
+  const [filteredTickets, setFilteredTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [newTicket, setNewTicket] = useState({ description: "", priority: "" });
 
   // Redirect if not authorized
@@ -57,6 +58,7 @@ export default function ClientDashboard() {
 
         const data = await response.json();
         setTickets(data);
+        setFilteredTickets(data); // Initialize filtered tickets
       } catch (error) {
         console.error("Error:", error);
         setError(error.message);
@@ -83,12 +85,25 @@ export default function ClientDashboard() {
 
       const createdTicket = await response.json();
       setTickets((prev) => [createdTicket, ...prev]);
+      setFilteredTickets((prev) => [createdTicket, ...prev]);
       setNewTicket({ description: "", priority: "" });
     } catch (error) {
       console.error("Error:", error);
       setError(error.message);
     }
   }
+
+  // Debounced search filter (Runs after 1 second of inactivity)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const filtered = tickets.filter((ticket) =>
+        ticket.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredTickets(filtered);
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [searchTerm, tickets]);
 
   return (
     <div className="flex flex-col items-center mt-18 space-y-6">
@@ -121,24 +136,18 @@ export default function ClientDashboard() {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="low" className="bg-green-600">
-                    Low
-                  </SelectItem>
-                  <SelectItem value="medium" className="bg-yellow-300">
-                    Medium
-                  </SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
-            {/* // value={newTicket.priority}
-              // onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })} */}
           </div>
           <Button onClick={handleCreateTicket}>Submit</Button>
         </CardContent>
       </Card>
 
-      {/* ShadCN Alert for errors (Below Ticket Card) */}
+      {/* ShadCN Alert for errors */}
       {error && (
         <Alert variant="destructive" className="w-full max-w-2xl">
           <TriangleAlert className="h-5 w-5" />
@@ -147,15 +156,25 @@ export default function ClientDashboard() {
         </Alert>
       )}
 
+ 
+
       {/* Tickets Table */}
       <Card className="w-full max-w-4xl">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Your Tickets</CardTitle>
         </CardHeader>
         <CardContent>
+               {/* Search Bar */}
+      <Input
+        type="text"
+        placeholder="Search tickets..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="w-full max-w-4xl mb-4"
+      />
           {loading ? (
             <p className="text-center text-gray-500">Loading tickets...</p>
-          ) : tickets.length === 0 ? (
+          ) : filteredTickets.length === 0 ? (
             <p className="text-center text-gray-500">No tickets found</p>
           ) : (
             <div className="overflow-x-auto">
@@ -169,7 +188,7 @@ export default function ClientDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tickets.map((ticket) => (
+                  {filteredTickets.map((ticket) => (
                     <TableRow key={ticket.id}>
                       <TableCell className="w-1/2">
                         {ticket.description}
