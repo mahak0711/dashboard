@@ -21,23 +21,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // ShadCN Alert
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TriangleAlert } from "lucide-react"; // Icon for Alert
+import { TriangleAlert } from "lucide-react";
 
 export default function ClientDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-
+  
+  // Ensure default values are valid
+  const [selectedPriority, setSelectedPriority] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const [tickets, setTickets] = useState([]);
   const [filteredTickets, setFilteredTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [newTicket, setNewTicket] = useState({ description: "", priority: "" });
+  const [newTicket, setNewTicket] = useState({ description: "", priority: "low" });
 
-  // Redirect if not authorized
   useEffect(() => {
     if (status === "loading") return;
     if (!session) {
@@ -49,16 +51,14 @@ export default function ClientDashboard() {
     }
   }, [session, status]);
 
-  // Fetch tickets for the logged-in user
   useEffect(() => {
     async function fetchTickets() {
       try {
         const response = await fetch("/api/ticket");
         if (!response.ok) throw new Error("Failed to fetch tickets");
-
         const data = await response.json();
         setTickets(data);
-        setFilteredTickets(data); // Initialize filtered tickets
+        setFilteredTickets(data);
       } catch (error) {
         console.error("Error:", error);
         setError(error.message);
@@ -72,39 +72,19 @@ export default function ClientDashboard() {
     }
   }, [session]);
 
-  // Handle ticket creation
-  async function handleCreateTicket() {
-    try {
-      const response = await fetch("/api/ticket", {
-        method: "POST",
-        body: JSON.stringify(newTicket),
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!response.ok) throw new Error("Failed to create ticket");
-
-      const createdTicket = await response.json();
-      setTickets((prev) => [createdTicket, ...prev]);
-      setFilteredTickets((prev) => [createdTicket, ...prev]);
-      setNewTicket({ description: "", priority: "" });
-    } catch (error) {
-      console.error("Error:", error);
-      setError(error.message);
-    }
-  }
-
-  // Debounced search filter (Runs after 1 second of inactivity)
   useEffect(() => {
     const timeout = setTimeout(() => {
-      const filtered = tickets.filter((ticket) =>
-        ticket.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const filtered = tickets.filter((ticket) => {
+        const matchesSearch = ticket.description.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesPriority = selectedPriority !== "all" ? ticket.priority.toLowerCase() === selectedPriority.toLowerCase() : true;
+        const matchesStatus = selectedStatus !== "all" ? ticket.status.toLowerCase() === selectedStatus.toLowerCase() : true;
+        return matchesSearch && matchesPriority && matchesStatus;
+      });
       setFilteredTickets(filtered);
-    }, 1000);
-
+    }, 500); // Reduce delay for better UX
     return () => clearTimeout(timeout);
-  }, [searchTerm, tickets]);
-
+  }, [searchTerm, selectedPriority, selectedStatus, tickets]);
+  
   return (
     <div className="flex flex-col items-center mt-18 space-y-6">
       <Card className="w-full max-w-4xl mt-20">
@@ -112,42 +92,30 @@ export default function ClientDashboard() {
           <CardTitle>Create a New Ticket</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label>Description</Label>
-            <Input
-              type="text"
-              placeholder="Enter ticket description"
-              value={newTicket.description}
-              onChange={(e) =>
-                setNewTicket({ ...newTicket, description: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <Label>Priority</Label>
-            <Select
-              value={newTicket.priority}
-              onValueChange={(value) =>
-                setNewTicket({ ...newTicket, priority: value })
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleCreateTicket}>Submit</Button>
+          <Label>Description</Label>
+          <Input
+            type="text"
+            placeholder="Enter ticket description"
+            value={newTicket.description}
+            onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
+          />
+          <Label>Priority</Label>
+          <Select value={newTicket.priority} onValueChange={(value) => setNewTicket({ ...newTicket, priority: value })}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Button>Submit</Button>
         </CardContent>
       </Card>
 
-      {/* ShadCN Alert for errors */}
       {error && (
         <Alert variant="destructive" className="w-full max-w-2xl">
           <TriangleAlert className="h-5 w-5" />
@@ -156,78 +124,77 @@ export default function ClientDashboard() {
         </Alert>
       )}
 
- 
-
-      {/* Tickets Table */}
       <Card className="w-full max-w-4xl">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Your Tickets</CardTitle>
         </CardHeader>
         <CardContent>
-               {/* Search Bar */}
-      <Input
-        type="text"
-        placeholder="Search tickets..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full max-w-4xl mb-4"
-      />
-          {loading ? (
-            <p className="text-center text-gray-500">Loading tickets...</p>
-          ) : filteredTickets.length === 0 ? (
-            <p className="text-center text-gray-500">No tickets found</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-1/2">Description</TableHead>
-                    <TableHead className="text-center">Priority</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
+          <div className="flex gap-4 mb-4">
+            <Input type="text" placeholder="Search tickets..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Select value={selectedPriority} onValueChange={setSelectedPriority}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          {loading ? <p>Loading tickets...</p> : filteredTickets.length === 0 ? <p>No tickets found</p> : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTickets.map((ticket) => (
+                  <TableRow key={ticket.id}>
+                    <TableCell>{ticket.description}</TableCell>
+                    <TableCell className="text-center">
+                      <span
+                        className={`px-3 py-1 rounded text-white font-medium ${
+                          ticket.priority.toLowerCase() === "high"
+                            ? "bg-red-500"
+                            : ticket.priority.toLowerCase() === "medium"
+                            ? "bg-yellow-500 text-black"
+                            : "bg-green-500"
+                        }`}
+                      >
+                        {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {ticket.status === "open" ? (
+                        <span className="text-green-600 font-semibold">Open</span>
+                      ) : (
+                        <span className="text-gray-500 font-semibold">Closed</span>
+                      )}
+                    </TableCell>
+                    
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTickets.map((ticket) => (
-                    <TableRow key={ticket.id}>
-                      <TableCell className="w-1/2">
-                        {ticket.description}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span
-                          className={`px-3 py-1 rounded text-white font-medium ${
-                            ticket.priority.toLowerCase() === "high"
-                              ? "bg-red-500"
-                              : ticket.priority.toLowerCase() === "medium"
-                              ? "bg-yellow-500 text-black"
-                              : "bg-green-500"
-                          }`}
-                        >
-                          {ticket.priority.charAt(0).toUpperCase() +
-                            ticket.priority.slice(1)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {ticket.status === "open" ? (
-                          <span className="text-green-600 font-semibold">
-                            Open
-                          </span>
-                        ) : (
-                          <span className="text-gray-500 font-semibold">
-                            Closed
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Button variant="outline" size="sm">
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
