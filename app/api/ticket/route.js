@@ -11,7 +11,7 @@ export async function GET(req) {
     }
 
     const tickets = await db.ticket.findMany({
-      where: session.user.email === "admin@example.com" ? {} : { createdById: session.user.id },
+      where: session.user.email === "mahak@admin.com" ? {} : { createdById: session.user.id },
       orderBy: { createdAt: "desc" },
     });
     

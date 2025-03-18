@@ -34,23 +34,26 @@ export async function POST(request) {
       );
     }
 
+    // ✅ Assign "ADMIN" role only if the email is mahak@admin.com, otherwise "CLIENT"
+    const assignedRole = email === "mahak@admin.com" ? "ADMIN" : "CLIENT";
+
     // ✅ Hash password securely
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Create new user with CLIENT role
+    // ✅ Create new user with the assigned role
     const newUser = await db.user.create({
       data: {
         username,
         email,
         password: hashedPassword,
-        role: "CLIENT", // Assign CLIENT role by default
+        role: assignedRole, // Assign "ADMIN" only to mahak@admin.com
       },
     });
 
-    // ✅ Automatically create a welcome ticket for new CLIENT users
+    // ✅ Automatically create a welcome ticket for new users
     const welcomeTicket = await db.ticket.create({
       data: {
-        description: "Welcome! This is your first ticket.",
+        description: `Welcome ${newUser.username}! This is your first ticket.`,
         priority: "LOW",
         createdById: newUser.id,
       },
@@ -62,7 +65,7 @@ export async function POST(request) {
       {
         user: rest,
         ticket: welcomeTicket,
-        message: "User registered successfully! A welcome ticket has been created.",
+        message: `User registered successfully! Assigned role: ${assignedRole}. A welcome ticket has been created.`,
       },
       { status: 201 }
     );

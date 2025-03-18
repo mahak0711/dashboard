@@ -19,7 +19,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [tickets, setTickets] = useState([]);
 
-  const ADMIN_EMAIL = "admin@example.com";
+  const ADMIN_EMAIL = "mahak@admin.com";
 
   useEffect(() => {
     if (status === "loading") return;
