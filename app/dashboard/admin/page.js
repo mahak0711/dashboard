@@ -13,11 +13,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select";
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [tickets, setTickets] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPriority, setSelectedPriority] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
 
   const ADMIN_EMAIL = "mahak@admin.com";
 
@@ -48,24 +60,16 @@ export default function AdminDashboard() {
 
   const handleCloseTicket = async (id) => {
     try {
-      console.log("Closing ticket ID:", id); // Debugging
-  
       const response = await fetch(`/api/ticket/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "closed" }),
       });
-  
-      console.log("API Response Status:", response.status); // Debugging
-  
+
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to update ticket: ${response.status} - ${errorText}`);
+        throw new Error(`Failed to update ticket: ${response.status}`);
       }
-  
-      const updatedTicket = await response.json();
-      console.log("Updated Ticket:", updatedTicket);
-  
+
       setTickets((prevTickets) =>
         prevTickets.map((ticket) =>
           ticket.id === id ? { ...ticket, status: "closed" } : ticket
@@ -75,7 +79,16 @@ export default function AdminDashboard() {
       console.error("Error:", error.message);
     }
   };
-  
+
+  // Filtering logic
+  const filteredTickets = tickets.filter((ticket) => {
+    return (
+      (selectedPriority === "all" || ticket.priority === selectedPriority) &&
+      (selectedStatus === "all" || ticket.status === selectedStatus) &&
+      ticket.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
   if (status === "loading") {
     return <p>Loading...</p>;
   }
@@ -85,13 +98,49 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="flex flex-col items-center mt-18 space-y-6">
+    <div className="flex flex-col items-center mt-28 space-y-6">
       <Card className="w-full max-w-4xl">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Admin Ticket Management</CardTitle>
         </CardHeader>
         <CardContent>
-          {tickets.length === 0 ? (
+          {/* Search and Filter UI */}
+          <div className="flex gap-4 mb-4">
+            <Input
+              type="text"
+              placeholder="Search tickets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Select value={selectedPriority} onValueChange={setSelectedPriority}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Tickets Table */}
+          {filteredTickets.length === 0 ? (
             <p className="text-center text-gray-500">No tickets found</p>
           ) : (
             <div className="overflow-x-auto">
@@ -105,11 +154,11 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tickets.map((ticket) => (
+                  {filteredTickets.map((ticket) => (
                     <TableRow key={ticket.id}>
                       <TableCell>{ticket.description}</TableCell>
                       <TableCell className="text-center">
-                      <span
+                        <span
                           className={`px-3 py-1 rounded text-white font-medium ${
                             ticket.priority.toLowerCase() === "high"
                               ? "bg-red-500"
@@ -118,8 +167,7 @@ export default function AdminDashboard() {
                               : "bg-green-500"
                           }`}
                         >
-                          {ticket.priority.charAt(0).toUpperCase() +
-                            ticket.priority.slice(1)}
+                          {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
