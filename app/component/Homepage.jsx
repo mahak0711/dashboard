@@ -3,9 +3,12 @@
 import { MacbookScroll } from "@/components/ui/macbook-scroll";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 export default function Homepage() {
   const { data: session } = useSession();
+  const router = useRouter();  // Define router
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#000000] text-white px-6 pt-24">
@@ -30,11 +33,10 @@ export default function Homepage() {
 
         {/* Show Admin Dashboard button only if user is logged in */}
         {session && (
-          <Link href="/dashboard/admin">
-            <button className="w-full px-6 py-3 text-lg font-semibold rounded-lg bg-black bg-opacity-50 shadow-md backdrop-blur-lg transition-all transform hover:scale-105 hover:bg-opacity-60">
-              Open My Admin
-            </button>
-          </Link>
+         <Button className="relative z-50" onClick={() => router.push(session?.user?.role === "ADMIN" ? "/dashboard/admin" : "/dashboard/client")}>
+         {session?.user?.role === "ADMIN" ? "Open My Admin" : "Manage Tickets"}
+       </Button>
+       
         )}
       </div>
 

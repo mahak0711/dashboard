@@ -29,8 +29,7 @@ import { TriangleAlert } from "lucide-react";
 export default function ClientDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
-  // Ensure default values are valid
+
   const [selectedPriority, setSelectedPriority] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [tickets, setTickets] = useState([]);
@@ -39,6 +38,7 @@ export default function ClientDashboard() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [newTicket, setNewTicket] = useState({ description: "", priority: "low" });
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -76,45 +76,79 @@ export default function ClientDashboard() {
     const timeout = setTimeout(() => {
       const filtered = tickets.filter((ticket) => {
         const matchesSearch = ticket.description.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesPriority = selectedPriority !== "all" ? ticket.priority.toLowerCase() === selectedPriority.toLowerCase() : true;
-        const matchesStatus = selectedStatus !== "all" ? ticket.status.toLowerCase() === selectedStatus.toLowerCase() : true;
+        const matchesPriority =
+          selectedPriority !== "all" ? ticket.priority.toLowerCase() === selectedPriority.toLowerCase() : true;
+        const matchesStatus =
+          selectedStatus !== "all" ? ticket.status.toLowerCase() === selectedStatus.toLowerCase() : true;
         return matchesSearch && matchesPriority && matchesStatus;
       });
       setFilteredTickets(filtered);
-    }, 500); // Reduce delay for better UX
+    }, 500);
     return () => clearTimeout(timeout);
   }, [searchTerm, selectedPriority, selectedStatus, tickets]);
-  
+
+  async function handleSubmit() {
+    try {
+      const response = await fetch("/api/ticket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTicket),
+      });
+
+      if (!response.ok) throw new Error("Failed to create ticket");
+
+      const createdTicket = await response.json();
+      setTickets((prev) => [...prev, createdTicket]);
+      setFilteredTickets((prev) => [...prev, createdTicket]);
+      setNewTicket({ description: "", priority: "low" });
+      setIsCreating(false);
+    } catch (error) {
+      console.error("Error:", error);
+      setError(error.message);
+    }
+  }
+
   return (
-    <div className="flex flex-col items-center mt-18 space-y-6">
-      <Card className="w-full max-w-4xl mt-20">
-        <CardHeader>
-          <CardTitle>Create a New Ticket</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Label>Description</Label>
-          <Input
-            type="text"
-            placeholder="Enter ticket description"
-            value={newTicket.description}
-            onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
-          />
-          <Label>Priority</Label>
-          <Select value={newTicket.priority} onValueChange={(value) => setNewTicket({ ...newTicket, priority: value })}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <Button>Submit</Button>
-        </CardContent>
-      </Card>
+    <div className="flex flex-col items-center mt-28 space-y-6">
+      {/* Create Ticket Button */}
+      <Button onClick={() => setIsCreating(true)}>Create Ticket</Button>
+
+      {/* Ticket Creation Modal */}
+      {isCreating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <Card className="w-full max-w-lg p-6 bg-white rounded-lg">
+            <CardHeader>
+              <CardTitle>Create a New Ticket</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Label>Description</Label>
+              <Input
+                type="text"
+                placeholder="Enter ticket description"
+                value={newTicket.description}
+                onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
+              />
+              <Label>Priority</Label>
+              <Select value={newTicket.priority} onValueChange={(value) => setNewTicket({ ...newTicket, priority: value })}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsCreating(false)}>Cancel</Button>
+                <Button onClick={handleSubmit}>Submit</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {error && (
         <Alert variant="destructive" className="w-full max-w-2xl">
@@ -157,13 +191,17 @@ export default function ClientDashboard() {
               </SelectContent>
             </Select>
           </div>
-          {loading ? <p>Loading tickets...</p> : filteredTickets.length === 0 ? <p>No tickets found</p> : (
+          {loading ? (
+            <p>Loading tickets...</p>
+          ) : filteredTickets.length === 0 ? (
+            <p>No tickets found</p>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Description</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="text-center">Priority</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -171,26 +209,17 @@ export default function ClientDashboard() {
                   <TableRow key={ticket.id}>
                     <TableCell>{ticket.description}</TableCell>
                     <TableCell className="text-center">
-                      <span
-                        className={`px-3 py-1 rounded text-white font-medium ${
-                          ticket.priority.toLowerCase() === "high"
-                            ? "bg-red-500"
-                            : ticket.priority.toLowerCase() === "medium"
-                            ? "bg-yellow-500 text-black"
-                            : "bg-green-500"
-                        }`}
-                      >
+                      <span className={`px-3 py-1 rounded text-white font-medium ${
+                        ticket.priority.toLowerCase() === "high"
+                          ? "bg-red-500"
+                          : ticket.priority.toLowerCase() === "medium"
+                          ? "bg-yellow-500 text-black"
+                          : "bg-green-500"
+                      }`}>
                         {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-center">
-                      {ticket.status === "open" ? (
-                        <span className="text-green-600 font-semibold">Open</span>
-                      ) : (
-                        <span className="text-gray-500 font-semibold">Closed</span>
-                      )}
-                    </TableCell>
-                    
+                    <TableCell className="text-center">{ticket.status === "open" ? "🟢 Open" : "⚪ Closed"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
